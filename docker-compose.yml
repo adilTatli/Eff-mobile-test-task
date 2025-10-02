@@ -1,0 +1,84 @@
+services:
+    # Project
+    app:
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        container_name: eff_app
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - .:/var/www
+            - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+        environment:
+            DB_CONNECTION: mysql
+            DB_HOST: db
+            DB_PORT: 3306
+            DB_USERNAME: user
+            DB_PASSWORD: 12345678
+        depends_on:
+            - db
+        networks:
+            - laravel
+
+    # Nginx
+    webserver:
+        image: nginx:alpine
+        container_name: eff_nginx
+        restart: unless-stopped
+        ports:
+            - "80:80"
+        volumes:
+            - .:/var/www
+            - ./docker/nginx/conf.d:/etc/nginx/conf.d
+        depends_on:
+            - app
+        networks:
+            - laravel
+
+    # MySQL 8.0
+    db:
+        image: mysql:8.0
+        container_name: eff_mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: eff_mobile
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_USER: user
+            MYSQL_PASSWORD: 12345678
+        ports:
+            - "3306:3306"
+        command: >
+            --default-authentication-plugin=mysql_native_password
+            --character-set-server=utf8mb4
+            --collation-server=utf8mb4_unicode_ci
+        volumes:
+            - dbdata:/var/lib/mysql
+        networks:
+            - laravel
+
+    # phpMyAdmin
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: eff_phpmyadmin
+        restart: unless-stopped
+        environment:
+            PMA_HOST: db
+            PMA_USER: user
+            PMA_PASSWORD: 12345678
+            UPLOAD_LIMIT: 64M
+        volumes:
+            - ./docker/phpmyadmin/php.ini:/usr/local/etc/php/conf.d/99-upload.ini
+        ports:
+            - "8080:80"
+        depends_on:
+            - db
+        networks:
+            - laravel
+
+networks:
+    laravel:
+        driver: bridge
+
+volumes:
+    dbdata:
