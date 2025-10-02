@@ -141,8 +141,14 @@ class StatusController extends Controller
      *     @OA\Response(response=204, description="No Content")
      * )
      */
-    public function destroy(Status $status) : Response
+    public function destroy(Status $status) : Response|JsonResponse
     {
+        if ($status->tasks()->exists()) {
+            return response()->json([
+                'message' => 'Не возможно удалить статус: к нему привязаны задачи.',
+            ], 409);
+        }
+
         $status->delete();
         return response()->noContent();
     }
